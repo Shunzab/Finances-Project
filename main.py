@@ -4,9 +4,6 @@ from functions import view_data, add_data
 today = datetime.date.today()
 
 
-
-
-
 def main():
     print(f"Today's date is: {today}")
     while True:
@@ -26,5 +23,3 @@ def main():
             break
         else:
             print("Invalid choice, please try again.")
-
-main()

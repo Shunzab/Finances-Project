@@ -23,7 +23,8 @@ def add_data():
         amount_call() # get amount
         amount = amounts
 
-        category = input("Please enter the category of the amount: ")
+        category_call()
+        category = categories
         
         use = input("Please enter the use of the amount : ")
 
@@ -64,3 +65,13 @@ def amount_call():
         print(f"Invalid amount format: {invformat}")
         return amount_call()
     
+def category_call():
+    global categories
+    categories = input("Please enter Z for income and X for expenditure.")
+    dictcat = ['Z', 'X']
+    categories = categories.upper()  # Ensure the input is uppercase
+    if categories not in dictcat:
+        print("Invalid category. Please enter 'Z' for income or 'X' for expenditure.")
+        return category_call()
+    else:
+        pass
