@@ -117,16 +117,16 @@ class filter(csv_file):  # Filter data by amount
             # Calculate totals for each month
             monthly_summary['Total'] = monthly_summary.sum(axis=1)
             
-            # Format the out    put
+            # Format the output
             print("\nMonthly Expense Summary:")
             print("=" * 60)
             print(f"{'Month':<20} {'Income':>10} {'Expenses':>10} {'Total':>10}")
             print("-" * 60)
             
             for month in monthly_summary.index: # iterate through all the months
-                income = monthly_summary.loc[month, 'Z'] if 'Z' in monthly_summary.columns else 0 # if the month is in the monthly_summary and the category is Z, then the income is the income for that month. Zero exists if the month is not in the monthly_summary or the category is not Z.
-                expenses = monthly_summary.loc[month, 'X'] if 'X' in monthly_summary.columns else 0 # if the month is in the monthly_summary and the category is X, then the expenses are the expenses for that month. Zero exists if the month is not in the monthly_summary or the category is not X.
-                total = monthly_summary.loc[month, 'Total'] # the total is the total for that month.
+                income = monthly_summary.loc[month, 'Z'] if 'Z' in monthly_summary.columns else 0
+                expenses = monthly_summary.loc[month, 'X'] if 'X' in monthly_summary.columns else 0
+                total = monthly_summary.loc[month, 'Total']
                 print(f"{month:<20} {income:>10.2f} {expenses:>10.2f} {total:>10.2f}")
             
             print("=" * 60)
@@ -134,9 +134,8 @@ class filter(csv_file):  # Filter data by amount
             # Calculate and display overall totals
             print("\nOverall Totals:")
             print("-" * 50)
-            # Missisg Categories
-            total_income = monthly_summary['Z'].sum() if 'Z' in monthly_summary.columns else 0 # if the category is Z, then the total income is the total income for that month. Zero exists if the category is not Z.
-            total_expenses = monthly_summary['X'].sum() if 'X' in monthly_summary.columns else 0 # if the category is X, then the total expenses are the total expenses for that month. Zero exists if the category is not X.
+            total_income = monthly_summary['Z'].sum() if 'Z' in monthly_summary.columns else 0
+            total_expenses = monthly_summary['X'].sum() if 'X' in monthly_summary.columns else 0
             net_savings = total_income - total_expenses
 
             print(f"Total Income:    {total_income:>10.2f}")
@@ -146,12 +145,45 @@ class filter(csv_file):  # Filter data by amount
 
         except Exception as error:
             print(f"An error occurred while calculating monthly expenses: {error}")
-            return none
+            return None
 
-filter.filter_data_by_date('01-01-2023','01-01-2025')
-filter.summary_of_all_data()
-filter.filter_by_amount_range(1,2000)
-filter.expenses_by_month()
+    @classmethod
+    def filter_by_category(self, category):
+        # Filter data by category
+        try:
+            df = pd.read_csv(self.CSV_FILE)
+            filtered_data = df[df['Category'] == category]
+            
+            if not filtered_data.empty:
+                print(f"\nFiltered Data for Category {category}:")
+                print("=" * 50)
+                print(f"{'Date':<12} {'Amount':>10} {'Category':>10} {'Use':<30}")
+                print("-" * 50)
+                
+                for _, row in filtered_data.iterrows():
+                    print(f"{row['Date']:<12} {row['Amount']:>10.2f} {row['Category']:>7} {row['Use']:<40}")
+                
+                print("=" * 50)
+                
+                # Calculate summary for the category
+                total_amount = filtered_data['Amount'].sum()
+                transaction_count = len(filtered_data)
+                
+                print("\nCategory Summary:")
+                print("-" * 50)
+                print(f"Total Amount:    {total_amount:>10.2f}")
+                print(f"Transactions:    {transaction_count:>10}")
+                print("=" * 50)
+                
+                return filtered_data
+            else:
+                print(f"No data found for category {category}")
+                return None
+                
+        except Exception as e:
+            print(f"Error filtering by category: {e}")
+            return None
+
 
 
 

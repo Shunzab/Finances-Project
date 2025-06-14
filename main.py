@@ -1,6 +1,14 @@
 from core import * # wildcard import all the functions from the core module
 import datetime
 from functions import * # wildcard import all the functions from the functions module
+from Filter_data import *
+from graphing import *
+import matplotlib.pyplot as plt
+from logs import *
+from users import *
+
+
+
 today = datetime.date.today()
 
 
@@ -28,4 +36,4 @@ def main():
         else:
             print("Invalid choice, please try again.")
 
-main()
+

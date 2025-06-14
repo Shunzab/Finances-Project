@@ -30,21 +30,4 @@ class csv_file: # A class to handle CSV file operations.
             writer.writerow(newentry)
         print(f"Entry Added.")
 
-class log: # A class to handle logging operations.
-    @staticmethod
-    def log_in():
-        # Log ins to finances.
-        with open('login.txt', 'a') as login:
-            login.write(f"{datetime.now()}\n")
-
-        print(f"Logged in at {datetime.now()}")
-        print(f"Last login at : {pd.read_csv('login.txt').tail(1).to_string(index=False)}")
-
-    @staticmethod
-    def log_out():
-        # Log outs from finances.
-        with open('logout.txt', 'a') as logout:
-            logout.write(f"{datetime.now()}\n")
-
-        print(f"Logged out at {datetime.now()}")
 
