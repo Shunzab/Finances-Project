@@ -4,7 +4,7 @@ import csv
 
 class csv_file: # A class to handle CSV file operations.
     CSV_FILE = 'data.csv' # csv file is data.csv called through CSV_FILE
-    Columns = ['Date', 'Amount', 'Category', 'Use'] # To put categories in csv file
+    Columns = ['Date', 'Amount', 'Currency', 'Use', 'Comment'] # To put categories in csv file
     
     @classmethod
     def get_csv(self):
@@ -16,13 +16,14 @@ class csv_file: # A class to handle CSV file operations.
             file.to_csv(self.CSV_FILE, index=False)
 
     @classmethod
-    def add_data(self, Date, Amount, Category, Use):
+    def add_data(self, Date, Amount, Currency, Use, Comment):
         # Add a new row of data to the CSV file.
         newentry = {
             'Date': Date,
             'Amount': Amount,
-            'Category': Category,
-            'Use': Use
+            'Currency': Currency,
+            'Use': Use,
+            'Comment': Comment
         }
         self.get_csv()
         with open(self.CSV_FILE, 'a', newline='') as csvfile: # opening csv file in append mode.
