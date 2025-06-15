@@ -5,6 +5,7 @@ import csv
 import matplotlib.pyplot as plt
 from Filter_data import filter
 import os
+import numpy as np
 
 class graphing(csv_file):
     @classmethod
@@ -214,9 +215,127 @@ class graphing(csv_file):
         except Exception as error:
             print(f"Error creating income vs expenses ratio visualization: {error}")
 
-# Example usage
-if __name__ == "__main__":
-    graphing.visualize_monthly_trends()
-    graphing.visualize_all_data()
-    graphing.visualize_currency_distribution()
-    graphing.visualize_income_expense_ratio()
+    @classmethod
+    def visualize_use_cases(self):
+        try:
+            df = pd.read_csv(self.CSV_FILE)
+            
+            # Count transactions by use case
+            use_counts = df['Use'].value_counts()
+            
+            # If there are too many use cases, combine the smaller ones into "Others"
+            if len(use_counts) > 10:
+                # Keep top 9 use cases and combine the rest
+                top_uses = use_counts.head(9)
+                other_uses = use_counts[9:].sum()
+                use_counts = pd.concat([top_uses, pd.Series({'Others': other_uses})])
+            
+            # Create pie chart
+            plt.figure(figsize=(12, 8))
+            colors = plt.cm.Pastel1(np.linspace(0, 1, len(use_counts)))
+            plt.pie(use_counts, 
+                   labels=use_counts.index,
+                   autopct='%1.1f%%',
+                   colors=colors,
+                   startangle=90)
+            plt.title('Distribution of Transactions by Use Case')
+            
+            # Add a legend
+            plt.legend(use_counts.index,
+                      title="Use Cases",
+                      loc="center left",
+                      bbox_to_anchor=(1, 0, 0.5, 1))
+            
+            plt.tight_layout()
+            
+            while True:
+                save = input("Do you want to save the plot?(y,n):").lower()
+                ans = ["y", "n"]
+                if save not in ans:
+                    continue
+                elif save == "y":
+                    if not os.path.exists('reports'):
+                        os.makedirs('reports')
+                    plt.savefig('reports/use_cases_distribution.png', 
+                              bbox_inches='tight', 
+                              dpi=300)
+                    print("Use cases distribution visualization saved to 'reports/use_cases_distribution.png'")
+                    break
+                elif save == "n":
+                    break
+                else:
+                    break
+            
+            plt.show()
+            plt.close()
+            
+        except Exception as error:
+            print(f"Error creating use cases visualization: {error}")
+
+    @classmethod
+    def visualize_use_cases_by_type(self):
+        try:
+            df = pd.read_csv(self.CSV_FILE)
+            
+            # Create separate pie charts for income and expenses
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 7))
+            
+            # Income use cases
+            income_uses = df[df['Amount'] > 0]['Use'].value_counts()
+            if len(income_uses) > 5:
+                top_income = income_uses.head(4)
+                other_income = income_uses[4:].sum()
+                income_uses = pd.concat([top_income, pd.Series({'Others': other_income})])
+            
+            # Expense use cases
+            expense_uses = df[df['Amount'] < 0]['Use'].value_counts()
+            if len(expense_uses) > 5:
+                top_expense = expense_uses.head(4)
+                other_expense = expense_uses[4:].sum()
+                expense_uses = pd.concat([top_expense, pd.Series({'Others': other_expense})])
+            
+            # Plot income use cases
+            colors1 = plt.cm.Greens(np.linspace(0.3, 0.8, len(income_uses)))
+            ax1.pie(income_uses, 
+                   labels=income_uses.index,
+                   autopct='%1.1f%%',
+                   colors=colors1,
+                   startangle=90)
+            ax1.set_title('Income Use Cases')
+            
+            # Plot expense use cases
+            colors2 = plt.cm.Reds(np.linspace(0.3, 0.8, len(expense_uses)))
+            ax2.pie(expense_uses, 
+                   labels=expense_uses.index,
+                   autopct='%1.1f%%',
+                   colors=colors2,
+                   startangle=90)
+            ax2.set_title('Expense Use Cases')
+            
+            plt.suptitle('Distribution of Use Cases by Transaction Type', y=1.05)
+            plt.tight_layout()
+            
+            while True:
+                save = input("Do you want to save the plot?(y,n):").lower()
+                ans = ["y", "n"]
+                if save not in ans:
+                    continue
+                elif save == "y":
+                    if not os.path.exists('reports'):
+                        os.makedirs('reports')
+                    plt.savefig('reports/use_cases_by_type.png', 
+                              bbox_inches='tight', 
+                              dpi=300)
+                    print("Use cases by type visualization saved to 'reports/use_cases_by_type.png'")
+                    break
+                elif save == "n":
+                    break
+                else:
+                    break
+            
+            plt.show()
+            plt.close()
+            
+        except Exception as error:
+            print(f"Error creating use cases by type visualization: {error}")
+

@@ -31,6 +31,8 @@ def display_menu():
     print("11. View Monthly Trends")
     print("12. View Currency Distribution")
     print("13. View Income vs Expenses Ratio")
+    print("14. View Use Cases Distribution")
+    print("15. View Use Cases by Type (Income/Expenses)")
     print("\n=== Exit ===")
     print("0. Exit Program")
 
@@ -64,7 +66,7 @@ def main():
         display_menu()
         
         try:
-            choice = input("\nEnter your choice (0-13): ").strip()
+            choice = input("\nEnter your choice (0-15): ").strip()
             
             if choice == "0":
                 print("\nThank you for using the Financial Management System!")
@@ -139,6 +141,16 @@ def main():
                 graphing.visualize_income_expense_ratio()
                 input("\nPress Enter to continue...")
                 
+            elif choice == "14":
+                print("\nGenerating Use Cases Distribution...")
+                graphing.visualize_use_cases()
+                input("\nPress Enter to continue...")
+                
+            elif choice == "15":
+                print("\nGenerating Use Cases by Type (Income/Expenses)...")
+                graphing.visualize_use_cases_by_type()
+                input("\nPress Enter to continue...")
+                
             else:
                 print("\nInvalid choice. Please try again.")
                 input("\nPress Enter to continue...")
@@ -147,3 +159,5 @@ def main():
             print(f"\nAn error occurred: {e}")
             input("\nPress Enter to continue...")
 
+
+main()
