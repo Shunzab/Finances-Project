@@ -14,6 +14,7 @@ class graphing(csv_file):
             # Read and prepare data
             df = pd.read_csv(self.CSV_FILE)
             df["Date"] = pd.to_datetime(df["Date"], format="%d-%m-%Y")
+            df = df.sort_values("Date")  # Sort by date
             df.set_index("Date", inplace=True)
             
             # Create figure with two subplots
@@ -84,7 +85,7 @@ class graphing(csv_file):
                 }
             }).reset_index()
             
-            # Sort the index by date
+            # Sort the data by date
             monthly_data['Date'] = pd.to_datetime(monthly_data['Month'], format='%B %Y')
             monthly_data = monthly_data.sort_values('Date')
             monthly_data['Month'] = monthly_data['Date'].dt.strftime('%B %Y')
@@ -146,8 +147,8 @@ class graphing(csv_file):
         try:
             df = pd.read_csv(self.CSV_FILE)
             
-            # Count transactions by currency
-            currency_counts = df['Currency'].value_counts()
+            # Count transactions by currency and sort by count
+            currency_counts = df['Currency'].value_counts().sort_values(ascending=False)
             
             # Create pie chart
             plt.figure(figsize=(10, 6))
@@ -220,8 +221,8 @@ class graphing(csv_file):
         try:
             df = pd.read_csv(self.CSV_FILE)
             
-            # Count transactions by use case
-            use_counts = df['Use'].value_counts()
+            # Count transactions by use case and sort by count
+            use_counts = df['Use'].value_counts().sort_values(ascending=False)
             
             # If there are too many use cases, combine the smaller ones into "Others"
             if len(use_counts) > 10:
@@ -280,15 +281,15 @@ class graphing(csv_file):
             # Create separate pie charts for income and expenses
             fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 7))
             
-            # Income use cases
-            income_uses = df[df['Amount'] > 0]['Use'].value_counts()
+            # Income use cases - sort by count
+            income_uses = df[df['Amount'] > 0]['Use'].value_counts().sort_values(ascending=False)
             if len(income_uses) > 5:
                 top_income = income_uses.head(4)
                 other_income = income_uses[4:].sum()
                 income_uses = pd.concat([top_income, pd.Series({'Others': other_income})])
             
-            # Expense use cases
-            expense_uses = df[df['Amount'] < 0]['Use'].value_counts()
+            # Expense use cases - sort by count
+            expense_uses = df[df['Amount'] < 0]['Use'].value_counts().sort_values(ascending=False)
             if len(expense_uses) > 5:
                 top_expense = expense_uses.head(4)
                 other_expense = expense_uses[4:].sum()

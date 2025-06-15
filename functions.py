@@ -237,6 +237,13 @@ def edit_transaction():
         new_date = input(f"Date [{data.iloc[idx]['Date']}]: ").strip()
         if not new_date:
             new_date = data.iloc[idx]['Date']
+        else:
+            try:
+                new_date = csv_file.standardize_date(new_date)
+            except ValueError as e:
+                print(f"Invalid date format. {str(e)}")
+                print("Keeping current date.")
+                new_date = data.iloc[idx]['Date']
         
         # Amount
         new_amount = input(f"Amount [{data.iloc[idx]['Amount']}]: ").strip()

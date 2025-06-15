@@ -1,6 +1,6 @@
 from core import * # wildcard import all the functions from the core module
 from datetime import datetime
-from functions import * # wildcard import all the functions from the functions module
+from functions import * 
 from Filter_data import *
 from graphing import *
 import matplotlib.pyplot as plt

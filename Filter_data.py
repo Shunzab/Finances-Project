@@ -34,12 +34,16 @@ class filter(csv_file):  # Filter data by amount
     @classmethod
     def filter_data_by_date(self, start_date, end_date): # filter data for a specific period
         try:
+            # Standardize input dates
+            start_date = csv_file.standardize_date(start_date)
+            end_date = csv_file.standardize_date(end_date)
+            
             reader = pd.read_csv(self.CSV_FILE) # read the csv file
             reader["Date"] = pd.to_datetime(reader["Date"], format="%d-%m-%Y")
 
             # Convert the start date to a datetime object
-            start_date = datetime.strptime(start_date,"%d-%m-%Y") 
-            end_date = datetime.strptime(end_date,"%d-%m-%Y")      
+            start_date = datetime.strptime(start_date, "%d-%m-%Y") 
+            end_date = datetime.strptime(end_date, "%d-%m-%Y")      
 
             # Create a boolean mask to filter the data
             comparator = (reader['Date'] >= start_date) & (reader['Date'] <= end_date)
