@@ -3,6 +3,7 @@ from datetime import datetime
 from functions import * 
 from Filter_data import *
 from graphing import *
+from predictions import *
 import matplotlib.pyplot as plt
 from logs import *
 from users import *
@@ -33,6 +34,11 @@ def display_menu():
     print("13. View Income vs Expenses Ratio")
     print("14. View Use Cases Distribution")
     print("15. View Use Cases by Type (Income/Expenses)")
+    print("\n=== Prediction Options ===")
+    print("16. View Future Predictions")
+    print("17. View Prediction Summary")
+    print("18. Compare Predictions with Actual Data")
+    print("19. View Prediction Comparison Summary")
     print("\n=== Exit ===")
     print("0. Exit Program")
 
@@ -66,7 +72,7 @@ def main():
         display_menu()
         
         try:
-            choice = input("\nEnter your choice (0-15): ").strip()
+            choice = input("\nEnter your choice (0-19): ").strip()
             
             if choice == "0":
                 print("\nThank you for using the Financial Management System!")
@@ -149,6 +155,62 @@ def main():
             elif choice == "15":
                 print("\nGenerating Use Cases by Type (Income/Expenses)...")
                 graphing.visualize_use_cases_by_type()
+                input("\nPress Enter to continue...")
+                
+            elif choice == "16":
+                print("\nGenerating Future Predictions...")
+                try:
+                    days = int(input("Enter number of days to predict (default: 30): ") or "30")
+                    predictions_data, r2_scores = predictions.predict_future(days)
+                    if predictions_data:
+                        graphing.visualize_predictions(predictions_data, r2_scores)
+                except ValueError:
+                    print("Invalid input. Using default 30 days.")
+                    predictions_data, r2_scores = predictions.predict_future()
+                    if predictions_data:
+                        graphing.visualize_predictions(predictions_data, r2_scores)
+                input("\nPress Enter to continue...")
+                
+            elif choice == "17":
+                print("\nGenerating Prediction Summary...")
+                try:
+                    days = int(input("Enter number of days to predict (default: 30): ") or "30")
+                    predictions_data, r2_scores = predictions.predict_future(days)
+                    if predictions_data:
+                        predictions.get_prediction_summary(predictions_data, r2_scores)
+                except ValueError:
+                    print("Invalid input. Using default 30 days.")
+                    predictions_data, r2_scores = predictions.predict_future()
+                    if predictions_data:
+                        predictions.get_prediction_summary(predictions_data, r2_scores)
+                input("\nPress Enter to continue...")
+                
+            elif choice == "18":
+                print("\nComparing Predictions with Actual Data...")
+                try:
+                    days = int(input("Enter number of days to compare (default: 30): ") or "30")
+                    comparison_data, error_metrics = predictions.compare_predictions_with_actual(days)
+                    if comparison_data:
+                        graphing.visualize_prediction_comparison(comparison_data, error_metrics)
+                except ValueError:
+                    print("Invalid input. Using default 30 days.")
+                    comparison_data, error_metrics = predictions.compare_predictions_with_actual()
+                    if comparison_data:
+                        graphing.visualize_prediction_comparison(comparison_data, error_metrics)
+                input("\nPress Enter to continue...")
+                
+            elif choice == "19":
+                print("\nGenerating Prediction Comparison Summary...")
+                try:
+                    days = int(input("Enter number of days to compare (default: 30): ") or "30")
+                    comparison_data, error_metrics = predictions.compare_predictions_with_actual(days)
+                    if comparison_data:
+                        predictions.get_comparison_summary(comparison_data, error_metrics)
+                except ValueError:
+                    print("Invalid input. Using default 30 days.")
+                    comparison_data, error_metrics = predictions.compare_predictions_with_actual()
+                    if comparison_data:
+                        predictions.get_comparison_summary(comparison_data, error_metrics)
                 input("\nPress Enter to continue...")
                 
             else:

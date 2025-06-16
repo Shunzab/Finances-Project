@@ -20,5 +20,3 @@ class log: # A class to handle logging operations.
         print(f"Logged out at {datetime.now()}")
 
 
-log.log_in()
-log.log_out()

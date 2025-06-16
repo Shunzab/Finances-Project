@@ -1,384 +1,229 @@
+from core import *
 import pandas as pd
 import numpy as np
+from datetime import datetime, timedelta
 from sklearn.linear_model import LinearRegression
-import plotly.graph_objects as go
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.metrics import r2_score
+import warnings
+warnings.filterwarnings('ignore')
 
-def make_predictions(df, forecast_periods=30):
-    """
-    Generate financial predictions for income, expenses, and net balance.
-    
-    Args:
-        df (pd.DataFrame): Input DataFrame with financial data
-        forecast_periods (int): Number of days to forecast
-        
-    Returns:
-        pd.DataFrame: Predictions with confidence intervals
-    """
-    # Prepare data
-    df['Date'] = pd.to_datetime(df['Date'])
-    df['Amount'] = df['Amount'].abs()  # Ensure all amounts are positive
-    
-    # Create daily aggregates
-    daily_data = df.groupby(['Date', 'Category']).agg({
-        'Amount': 'sum',
-        'Description': 'count'
-    }).reset_index()
-    
-    # Create features
-    daily_data['Day'] = daily_data['Date'].dt.day
-    daily_data['Month'] = daily_data['Date'].dt.month
-    daily_data['DayOfWeek'] = daily_data['Date'].dt.dayofweek
-    
-    # Separate income and expenses
-    income_data = daily_data[daily_data['Category'] == 'Income'].copy()
-    expenses_data = daily_data[daily_data['Category'] == 'Expense'].copy()
-    
-    # Prepare features for prediction
-    X_income = income_data[['Day', 'Month', 'DayOfWeek']]
-    y_income = income_data['Amount']
-    X_expenses = expenses_data[['Day', 'Month', 'DayOfWeek']]
-    y_expenses = expenses_data['Amount']
-    
-    # Train models
-    income_model = LinearRegression()
-    expenses_model = LinearRegression()
-    
-    if len(X_income) > 0:
-        income_model.fit(X_income, y_income)
-    if len(X_expenses) > 0:
-        expenses_model.fit(X_expenses, y_expenses)
-    
-    # Generate future dates
-    last_date = df['Date'].max()
-    future_dates = pd.date_range(start=last_date + pd.Timedelta(days=1), periods=forecast_periods)
-    
-    # Create prediction features
-    future_features = pd.DataFrame({
-        'Date': future_dates,
-        'Day': future_dates.day,
-        'Month': future_dates.month,
-        'DayOfWeek': future_dates.dayofweek
-    })
-    
-    # Make predictions
-    if len(X_income) > 0:
-        income_pred = income_model.predict(future_features[['Day', 'Month', 'DayOfWeek']])
-    else:
-        income_pred = np.zeros(forecast_periods)
-        
-    if len(X_expenses) > 0:
-        expenses_pred = expenses_model.predict(future_features[['Day', 'Month', 'DayOfWeek']])
-    else:
-        expenses_pred = np.zeros(forecast_periods)
-    
-    # Calculate confidence intervals
-    if len(X_income) > 0:
-        income_std = np.std(y_income - income_model.predict(X_income))
-        income_ci = 1.96 * income_std * np.sqrt(1 + np.sum((future_features[['Day', 'Month', 'DayOfWeek']] - X_income.mean())**2, axis=1))
-    else:
-        income_ci = np.zeros(forecast_periods)
-        
-    if len(X_expenses) > 0:
-        expenses_std = np.std(y_expenses - expenses_model.predict(X_expenses))
-        expenses_ci = 1.96 * expenses_std * np.sqrt(1 + np.sum((future_features[['Day', 'Month', 'DayOfWeek']] - X_expenses.mean())**2, axis=1))
-    else:
-        expenses_ci = np.zeros(forecast_periods)
-    
-    # Create prediction DataFrame
-    predictions = pd.DataFrame({
-        'Date': future_dates,
-        'Predicted_Income': income_pred,
-        'Predicted_Expenses': expenses_pred,
-        'Income_CI_Lower': income_pred - income_ci,
-        'Income_CI_Upper': income_pred + income_ci,
-        'Expenses_CI_Lower': expenses_pred - expenses_ci,
-        'Expenses_CI_Upper': expenses_pred + expenses_ci
-    })
-    
-    # Calculate net balance predictions
-    predictions['Predicted_Net'] = predictions['Predicted_Income'] - predictions['Predicted_Expenses']
-    predictions['Net_CI_Lower'] = predictions['Income_CI_Lower'] - predictions['Expenses_CI_Upper']
-    predictions['Net_CI_Upper'] = predictions['Income_CI_Upper'] - predictions['Expenses_CI_Lower']
-    
-    # Calculate trend indicators
-    predictions['Income_Trend'] = predictions['Predicted_Income'].pct_change()
-    predictions['Expenses_Trend'] = predictions['Predicted_Expenses'].pct_change()
-    predictions['Net_Trend'] = predictions['Predicted_Net'].pct_change()
-    
-    return predictions, income_model, expenses_model, X_income, y_income, X_expenses, y_expenses
-
-def create_forecast_chart(df, predictions):
-    """
-    Create the income vs expenses forecast chart.
-    
-    Args:
-        df (pd.DataFrame): Historical data
-        predictions (pd.DataFrame): Prediction data
-        
-    Returns:
-        go.Figure: Plotly figure object
-    """
-    fig_forecast = go.Figure()
-    
-    # Add historical data
-    historical_income = df[df['Category'] == 'Income'].groupby('Date')['Amount'].sum()
-    historical_expenses = df[df['Category'] == 'Expense'].groupby('Date')['Amount'].sum()
-    
-    fig_forecast.add_trace(go.Scatter(
-        x=historical_income.index,
-        y=historical_income.values,
-        name='Historical Income',
-        line=dict(color='#2ecc71', width=2),
-        mode='lines+markers',
-        marker=dict(size=6)
-    ))
-    
-    fig_forecast.add_trace(go.Scatter(
-        x=historical_expenses.index,
-        y=historical_expenses.values,
-        name='Historical Expenses',
-        line=dict(color='#e74c3c', width=2),
-        mode='lines+markers',
-        marker=dict(size=6)
-    ))
-    
-    # Add predictions with confidence intervals
-    fig_forecast.add_trace(go.Scatter(
-        x=predictions['Date'],
-        y=predictions['Predicted_Income'],
-        name='Predicted Income',
-        line=dict(color='#2ecc71', width=2, dash='dash'),
-        mode='lines+markers',
-        marker=dict(size=6)
-    ))
-    
-    fig_forecast.add_trace(go.Scatter(
-        x=predictions['Date'],
-        y=predictions['Predicted_Expenses'],
-        name='Predicted Expenses',
-        line=dict(color='#e74c3c', width=2, dash='dash'),
-        mode='lines+markers',
-        marker=dict(size=6)
-    ))
-    
-    # Add confidence intervals
-    fig_forecast.add_trace(go.Scatter(
-        x=predictions['Date'],
-        y=predictions['Income_CI_Upper'],
-        fill=None,
-        mode='lines',
-        line=dict(width=0),
-        showlegend=False
-    ))
-    
-    fig_forecast.add_trace(go.Scatter(
-        x=predictions['Date'],
-        y=predictions['Income_CI_Lower'],
-        fill='tonexty',
-        mode='lines',
-        line=dict(width=0),
-        name='Income Confidence Interval',
-        fillcolor='rgba(46, 204, 113, 0.2)'
-    ))
-    
-    fig_forecast.add_trace(go.Scatter(
-        x=predictions['Date'],
-        y=predictions['Expenses_CI_Upper'],
-        fill=None,
-        mode='lines',
-        line=dict(width=0),
-        showlegend=False
-    ))
-    
-    fig_forecast.add_trace(go.Scatter(
-        x=predictions['Date'],
-        y=predictions['Expenses_CI_Lower'],
-        fill='tonexty',
-        mode='lines',
-        line=dict(width=0),
-        name='Expenses Confidence Interval',
-        fillcolor='rgba(231, 76, 60, 0.2)'
-    ))
-    
-    # Add trend annotations
-    for i in range(len(predictions)):
-        if i > 0:
-            # Income trend
-            if predictions['Income_Trend'].iloc[i] > 0.05:
-                fig_forecast.add_annotation(
-                    x=predictions['Date'].iloc[i],
-                    y=predictions['Predicted_Income'].iloc[i],
-                    text="↑",
-                    showarrow=False,
-                    font=dict(color='#2ecc71', size=16)
-                )
-            elif predictions['Income_Trend'].iloc[i] < -0.05:
-                fig_forecast.add_annotation(
-                    x=predictions['Date'].iloc[i],
-                    y=predictions['Predicted_Income'].iloc[i],
-                    text="↓",
-                    showarrow=False,
-                    font=dict(color='#2ecc71', size=16)
-                )
+class predictions(csv_file):
+    @classmethod
+    def prepare_data(self):
+        try:
+            # Read and prepare data
+            df = pd.read_csv(self.CSV_FILE)
+            df["Date"] = pd.to_datetime(df["Date"], format="%d-%m-%Y")
+            df = df.sort_values("Date")
             
-            # Expenses trend
-            if predictions['Expenses_Trend'].iloc[i] > 0.05:
-                fig_forecast.add_annotation(
-                    x=predictions['Date'].iloc[i],
-                    y=predictions['Predicted_Expenses'].iloc[i],
-                    text="↑",
-                    showarrow=False,
-                    font=dict(color='#e74c3c', size=16)
-                )
-            elif predictions['Expenses_Trend'].iloc[i] < -0.05:
-                fig_forecast.add_annotation(
-                    x=predictions['Date'].iloc[i],
-                    y=predictions['Predicted_Expenses'].iloc[i],
-                    text="↓",
-                    showarrow=False,
-                    font=dict(color='#e74c3c', size=16)
-                )
-    
-    fig_forecast.update_layout(
-        title='Income and Expenses Forecast',
-        xaxis_title='Date',
-        yaxis_title='Amount (USD)',
-        hovermode='x unified',
-        showlegend=True,
-        legend=dict(
-            orientation='h',
-            yanchor='bottom',
-            y=1.02,
-            xanchor='right',
-            x=1
-        ),
-        template='plotly_white',
-        height=500
-    )
-    
-    return fig_forecast
+            # Create daily aggregates
+            daily_data = df.groupby('Date').agg({
+                'Amount': lambda x: {
+                    'Income': x[x > 0].sum(),
+                    'Expenses': abs(x[x < 0].sum()),
+                    'Net': x.sum()
+                }
+            }).reset_index()
+            
+            # Create features for prediction
+            daily_data['Days'] = (daily_data['Date'] - daily_data['Date'].min()).dt.days
+            
+            return daily_data
+        except Exception as e:
+            print(f"Error preparing data: {e}")
+            return None
 
-def create_net_balance_chart(df, predictions):
-    """
-    Create the net balance forecast chart.
-    
-    Args:
-        df (pd.DataFrame): Historical data
-        predictions (pd.DataFrame): Prediction data
-        
-    Returns:
-        go.Figure: Plotly figure object
-    """
-    fig_net = go.Figure()
-    
-    # Add historical net balance
-    historical_income = df[df['Category'] == 'Income'].groupby('Date')['Amount'].sum()
-    historical_expenses = df[df['Category'] == 'Expense'].groupby('Date')['Amount'].sum()
-    historical_net = historical_income - historical_expenses
-    
-    fig_net.add_trace(go.Scatter(
-        x=historical_net.index,
-        y=historical_net.values,
-        name='Historical Net Balance',
-        line=dict(color='#3498db', width=2),
-        mode='lines+markers',
-        marker=dict(size=6)
-    ))
-    
-    # Add predicted net balance
-    fig_net.add_trace(go.Scatter(
-        x=predictions['Date'],
-        y=predictions['Predicted_Net'],
-        name='Predicted Net Balance',
-        line=dict(color='#3498db', width=2, dash='dash'),
-        mode='lines+markers',
-        marker=dict(size=6)
-    ))
-    
-    # Add confidence interval
-    fig_net.add_trace(go.Scatter(
-        x=predictions['Date'],
-        y=predictions['Net_CI_Upper'],
-        fill=None,
-        mode='lines',
-        line=dict(width=0),
-        showlegend=False
-    ))
-    
-    fig_net.add_trace(go.Scatter(
-        x=predictions['Date'],
-        y=predictions['Net_CI_Lower'],
-        fill='tonexty',
-        mode='lines',
-        line=dict(width=0),
-        name='Confidence Interval',
-        fillcolor='rgba(52, 152, 219, 0.2)'
-    ))
-    
-    # Add trend annotations
-    for i in range(len(predictions)):
-        if i > 0:
-            if predictions['Net_Trend'].iloc[i] > 0.05:
-                fig_net.add_annotation(
-                    x=predictions['Date'].iloc[i],
-                    y=predictions['Predicted_Net'].iloc[i],
-                    text="↑",
-                    showarrow=False,
-                    font=dict(color='#3498db', size=16)
-                )
-            elif predictions['Net_Trend'].iloc[i] < -0.05:
-                fig_net.add_annotation(
-                    x=predictions['Date'].iloc[i],
-                    y=predictions['Predicted_Net'].iloc[i],
-                    text="↓",
-                    showarrow=False,
-                    font=dict(color='#3498db', size=16)
-                )
-    
-    fig_net.update_layout(
-        title='Net Balance Forecast',
-        xaxis_title='Date',
-        yaxis_title='Amount (USD)',
-        hovermode='x unified',
-        showlegend=True,
-        legend=dict(
-            orientation='h',
-            yanchor='bottom',
-            y=1.02,
-            xanchor='right',
-            x=1
-        ),
-        template='plotly_white',
-        height=500
-    )
-    
-    return fig_net
+    @classmethod
+    def predict_future(self, days_to_predict=30):
+        try:
+            daily_data = self.prepare_data()
+            if daily_data is None:
+                return None
 
-def calculate_prediction_metrics(income_model, expenses_model, X_income, y_income, X_expenses, y_expenses):
-    """
-    Calculate prediction accuracy metrics.
-    
-    Args:
-        income_model: Trained income prediction model
-        expenses_model: Trained expenses prediction model
-        X_income: Income features
-        y_income: Income target
-        X_expenses: Expenses features
-        y_expenses: Expenses target
-        
-    Returns:
-        dict: Dictionary containing prediction metrics
-    """
-    metrics = {}
-    
-    # Calculate R-squared for income
-    if len(X_income) > 0:
-        metrics['income_r2'] = income_model.score(X_income, y_income)
-        metrics['income_mae'] = np.mean(np.abs(y_income - income_model.predict(X_income)))
-    
-    # Calculate R-squared for expenses
-    if len(X_expenses) > 0:
-        metrics['expenses_r2'] = expenses_model.score(X_expenses, y_expenses)
-        metrics['expenses_mae'] = np.mean(np.abs(y_expenses - expenses_model.predict(X_expenses)))
-    
-    return metrics 
+            # Prepare features for prediction
+            X = daily_data['Days'].values.reshape(-1, 1)
+            y_income = daily_data['Amount'].apply(lambda x: x['Income']).values
+            y_expenses = daily_data['Amount'].apply(lambda x: x['Expenses']).values
+            y_net = daily_data['Amount'].apply(lambda x: x['Net']).values
+
+            # Create polynomial features
+            poly = PolynomialFeatures(degree=2)
+            X_poly = poly.fit_transform(X)
+
+            # Train models
+            models = {
+                'Income': LinearRegression(),
+                'Expenses': LinearRegression(),
+                'Net': LinearRegression()
+            }
+
+            models['Income'].fit(X_poly, y_income)
+            models['Expenses'].fit(X_poly, y_expenses)
+            models['Net'].fit(X_poly, y_net)
+
+            # Generate future dates
+            last_date = daily_data['Date'].max()
+            future_dates = [last_date + timedelta(days=x) for x in range(1, days_to_predict + 1)]
+            future_days = np.array([(date - daily_data['Date'].min()).days for date in future_dates]).reshape(-1, 1)
+            future_days_poly = poly.transform(future_days)
+
+            # Make predictions
+            predictions = {
+                'Dates': future_dates,
+                'Income': models['Income'].predict(future_days_poly),
+                'Expenses': models['Expenses'].predict(future_days_poly),
+                'Net': models['Net'].predict(future_days_poly)
+            }
+
+            # Calculate R² scores
+            r2_scores = {
+                'Income': r2_score(y_income, models['Income'].predict(X_poly)),
+                'Expenses': r2_score(y_expenses, models['Expenses'].predict(X_poly)),
+                'Net': r2_score(y_net, models['Net'].predict(X_poly))
+            }
+
+            return predictions, r2_scores
+
+        except Exception as e:
+            print(f"Error making predictions: {e}")
+            return None
+
+    @classmethod
+    def get_prediction_summary(self, predictions, r2_scores):
+        try:
+            if predictions is None:
+                return
+
+            print("\nPrediction Summary:")
+            print("=" * 60)
+            print(f"Prediction Period: {predictions['Dates'][0].strftime('%d-%m-%Y')} to {predictions['Dates'][-1].strftime('%d-%m-%Y')}")
+            print("-" * 60)
+            
+            # Calculate averages
+            avg_income = np.mean(predictions['Income'])
+            avg_expenses = np.mean(predictions['Expenses'])
+            avg_net = np.mean(predictions['Net'])
+            
+            print(f"Predicted Average Income:    {avg_income:>10.2f}")
+            print(f"Predicted Average Expenses:  {avg_expenses:>10.2f}")
+            print(f"Predicted Average Net:       {avg_net:>10.2f}")
+            print("-" * 60)
+            
+            # Display R² scores
+            print("\nModel Accuracy (R² scores):")
+            print(f"Income Prediction:   {r2_scores['Income']:.3f}")
+            print(f"Expenses Prediction: {r2_scores['Expenses']:.3f}")
+            print(f"Net Prediction:      {r2_scores['Net']:.3f}")
+            print("=" * 60)
+            
+            # Add confidence warning
+            print("\nNote: Predictions are based on historical data and may not reflect future trends.")
+            print("Higher R² scores indicate more reliable predictions.")
+
+        except Exception as e:
+            print(f"Error generating prediction summary: {e}")
+
+    @classmethod
+    def compare_predictions_with_actual(self, days_to_compare=30):
+        try:
+            # Get predictions for the past period
+            predictions_data, r2_scores = self.predict_future(days_to_compare)
+            if predictions_data is None:
+                return None
+
+            # Get actual data for the same period
+            df = pd.read_csv(self.CSV_FILE)
+            df["Date"] = pd.to_datetime(df["Date"], format="%d-%m-%Y")
+            
+            # Filter data for the prediction period
+            start_date = predictions_data['Dates'][0]
+            end_date = predictions_data['Dates'][-1]
+            mask = (df['Date'] >= start_date) & (df['Date'] <= end_date)
+            actual_data = df[mask]
+
+            # Aggregate actual data by date
+            actual_daily = actual_data.groupby('Date').agg({
+                'Amount': lambda x: {
+                    'Income': x[x > 0].sum(),
+                    'Expenses': abs(x[x < 0].sum()),
+                    'Net': x.sum()
+                }
+            }).reset_index()
+
+            # Calculate differences
+            comparison = {
+                'Dates': predictions_data['Dates'],
+                'Predicted_Income': predictions_data['Income'],
+                'Actual_Income': [0] * len(predictions_data['Dates']),
+                'Predicted_Expenses': predictions_data['Expenses'],
+                'Actual_Expenses': [0] * len(predictions_data['Dates']),
+                'Predicted_Net': predictions_data['Net'],
+                'Actual_Net': [0] * len(predictions_data['Dates'])
+            }
+
+            # Fill in actual values where available
+            for date in actual_daily['Date']:
+                idx = predictions_data['Dates'].index(date)
+                actual_values = actual_daily[actual_daily['Date'] == date]['Amount'].iloc[0]
+                comparison['Actual_Income'][idx] = actual_values['Income']
+                comparison['Actual_Expenses'][idx] = actual_values['Expenses']
+                comparison['Actual_Net'][idx] = actual_values['Net']
+
+            # Calculate error metrics
+            error_metrics = {
+                'Income': {
+                    'MAE': np.mean(np.abs(np.array(comparison['Predicted_Income']) - np.array(comparison['Actual_Income']))),
+                    'RMSE': np.sqrt(np.mean((np.array(comparison['Predicted_Income']) - np.array(comparison['Actual_Income']))**2))
+                },
+                'Expenses': {
+                    'MAE': np.mean(np.abs(np.array(comparison['Predicted_Expenses']) - np.array(comparison['Actual_Expenses']))),
+                    'RMSE': np.sqrt(np.mean((np.array(comparison['Predicted_Expenses']) - np.array(comparison['Actual_Expenses']))**2))
+                },
+                'Net': {
+                    'MAE': np.mean(np.abs(np.array(comparison['Predicted_Net']) - np.array(comparison['Actual_Net']))),
+                    'RMSE': np.sqrt(np.mean((np.array(comparison['Predicted_Net']) - np.array(comparison['Actual_Net']))**2))
+                }
+            }
+
+            return comparison, error_metrics
+
+        except Exception as e:
+            print(f"Error comparing predictions with actual data: {e}")
+            return None
+
+    @classmethod
+    def get_comparison_summary(self, comparison, error_metrics):
+        try:
+            if comparison is None:
+                return
+
+            print("\nPrediction vs Actual Comparison Summary:")
+            print("=" * 80)
+            print(f"Comparison Period: {comparison['Dates'][0].strftime('%d-%m-%Y')} to {comparison['Dates'][-1].strftime('%d-%m-%Y')}")
+            print("-" * 80)
+            
+            # Calculate averages
+            print("\nAverage Values:")
+            print(f"{'Metric':<15} {'Predicted':>15} {'Actual':>15} {'Difference':>15}")
+            print("-" * 80)
+            
+            for metric in ['Income', 'Expenses', 'Net']:
+                pred_avg = np.mean(comparison[f'Predicted_{metric}'])
+                actual_avg = np.mean(comparison[f'Actual_{metric}'])
+                diff = pred_avg - actual_avg
+                print(f"{metric:<15} {pred_avg:>15.2f} {actual_avg:>15.2f} {diff:>15.2f}")
+            
+            print("\nError Metrics:")
+            print(f"{'Metric':<15} {'MAE':>15} {'RMSE':>15}")
+            print("-" * 80)
+            
+            for metric in ['Income', 'Expenses', 'Net']:
+                print(f"{metric:<15} {error_metrics[metric]['MAE']:>15.2f} {error_metrics[metric]['RMSE']:>15.2f}")
+            
+            print("=" * 80)
+            print("\nNote: MAE (Mean Absolute Error) and RMSE (Root Mean Square Error) indicate prediction accuracy.")
+            print("Lower values indicate better predictions.")
+
+        except Exception as e:
+            print(f"Error generating comparison summary: {e}") 
