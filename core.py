@@ -41,7 +41,18 @@ class csv_file: # A class to handle CSV file operations.
         except FileNotFoundError:
             file = pd.DataFrame(columns=self.Columns)
             file.to_csv(self.CSV_FILE, index=False)
-            return file
+            
+            with open(self.CSV_FILE, 'a', newline='') as csvfile: # opening csv file in append mode.
+                writer = csv.DictWriter(csvfile, fieldnames=self.Columns)
+                sample_dict = {
+                'Date': '01-01-2025',
+                'Amount': 1,
+                'Currency': 'PKR',
+                'Use': 'Error Handling',
+                'Comment':'This will be added if file is not present to avoid erroes.'
+                }
+                writer.writerow(sample_dict)
+                return file
 
     @classmethod
     def add_data(self, Date, Amount, Currency, Use, Comment):

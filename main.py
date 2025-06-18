@@ -70,7 +70,8 @@ def main():
     while True:
         clear_screen()
         display_menu()
-        
+        csv_file.get_csv()
+
         try:
             choice = input("\nEnter your choice (0-19): ").strip()
             
