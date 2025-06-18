@@ -36,8 +36,8 @@ A comprehensive command-line based financial management system that helps users 
 
 1. Clone the repository:
 ```bash
-git clone [your-repository-url]
-cd [repository-name]
+git clone [https://github.com/Shunzab/Finances-Project]
+cd [Finances-Project]
 ```
 
 2. Install the required dependencies:
