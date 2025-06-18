@@ -38,20 +38,25 @@ def view_data():
 
 def add_data():
     try:
-        date_call() # get date
+        date_call() 
         date = dates
 
-        amount_call() # get amount
+        amount_call() 
         amount = amounts
 
         Currency_call()
         Currency = currencies
-
-        Use = input('What is the use/origin of this amount: ')
-        if not Use:
-            print("Use/origin cannot be empty.")
-            return add_data()
         
+        while True:
+            Use = input('What is the use/origin of this amount: ')
+
+            if not Use:
+                print("Use/origin cannot be empty.")
+                continue
+
+            else:
+                break
+                
         Comment = input("Any Comments (press Enter to skip): ").strip()
         if not Comment:
             Comment = "No comment"
@@ -59,9 +64,9 @@ def add_data():
         # Determine if it's income or expense
         transaction_type = input("Is this an income or expense? (i/e): ").lower().strip()
         if transaction_type == 'e':
-            amount = -abs(amount)  # Make sure expense is negative
+            amount = -abs(amount)  
         elif transaction_type == 'i':
-            amount = abs(amount)   # Make sure income is positive
+            amount = abs(amount)   
         else:
             print("Invalid transaction type. Please use 'i' for income or 'e' for expense.")
             return add_data()
@@ -120,24 +125,12 @@ def Currency_call(): # specifying Currency
         global currencies
         global default_currency
         default_currency = 'PKR'
-        
-        currencies = ""
 
-        while True:
-            ask_currency = input("Do You want to go with the default currency(PKR), or use another currency?(y/n):").lower().strip()
-            if ask_currency == 'y':
-                currencies = input('Please enter the currency:').strip().upper()
-                if not currencies:
-                    print("Currency cannot be empty. Using default currency (PKR).")
-                    currencies = default_currency
-                break
-            elif ask_currency == 'n':
-                currencies = default_currency
-                break
-            else:
-                print('Please enter a valid value(y/n).')
-                continue
+        currencies = input(f"Which currency to use?(Press enter for default currency {default_currency}...)").strip()
         
+        if not currencies:
+            currencies = default_currency
+            
         return currencies
 
     except Exception as error:

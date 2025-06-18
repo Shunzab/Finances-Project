@@ -49,7 +49,7 @@ class csv_file: # A class to handle CSV file operations.
                 'Amount': 1,
                 'Currency': 'PKR',
                 'Use': 'Error Handling',
-                'Comment':'This will be added if file is not present to avoid erroes.'
+                'Comment':'This will be added if file is not present to avoid errors. This sample entry will be automatically deleted upon your first entry.'
                 }
                 writer.writerow(sample_dict)
                 return file
@@ -68,7 +68,17 @@ class csv_file: # A class to handle CSV file operations.
                 'Use': Use,
                 'Comment': Comment
             }
-            self.get_csv()
+            
+
+            df = self.get_csv()
+            
+            # sample data removal
+            if len(df) == 1 and df.iloc[0]['Use'] == 'Error Handling' and df.iloc[0]['Comment'] == 'This will be added if file is not present to avoid errors. This sample entry will be automatically deleted upon your first entry.':
+                
+                df = df.drop(0)
+                df.to_csv(self.CSV_FILE, index=False)
+            
+            # Add the new entry
             with open(self.CSV_FILE, 'a', newline='') as csvfile: # opening csv file in append mode.
                 writer = csv.DictWriter(csvfile, fieldnames=self.Columns)
                 writer.writerow(newentry)
